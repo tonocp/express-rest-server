@@ -20,14 +20,6 @@ const postUser = async (req = request, res = response) => {
   const { name, email, password, role } = req.body;
   const user = new User({ name, email, password, role });
 
-  // Check if email exists
-  const emailExists = await User.findOne({ email });
-  if (emailExists) {
-    return res.status(400).json({
-      msg: 'Email already exists',
-    });
-  }
-
   // Password encryption
   const salt = bcrypt.genSaltSync();
   user.password = bcrypt.hashSync(password, salt);
@@ -39,12 +31,20 @@ const postUser = async (req = request, res = response) => {
   });
 };
 
-const putUser = (req = request, res = response) => {
-  const id = req.params.id;
+const putUser = async (req = request, res = response) => {
+  const { id } = req.params;
+  const { _id, password, google, email, ...rest } = req.body;
+
+  if (password) {
+    const salt = bcrypt.genSaltSync();
+    rest.password = bcrypt.hashSync(password, salt);
+  }
+
+  const user = await User.findByIdAndUpdate(id, rest);
 
   res.status(500).json({
     msg: 'PUT USER',
-    id,
+    user,
   });
 };
 
