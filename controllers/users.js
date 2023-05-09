@@ -3,16 +3,18 @@ const bcrypt = require('bcryptjs');
 
 const User = require('../models/user');
 
-const getUsers = (req = request, res = response) => {
-  const { query, name, apiKey, page = 1, limit } = req.query;
+const getUsers = async (req = request, res = response) => {
+  const { limit = 5, from = 0 } = req.query;
+  const query = { status: true };
+
+  const [total, users] = await Promise.all([
+    User.countDocuments(query),
+    User.find(query).skip(Number(from)).limit(Number(limit)),
+  ]);
 
   res.json({
-    msg: 'GET USER',
-    query,
-    name,
-    apiKey,
-    page,
-    limit,
+    total,
+    users,
   });
 };
 
@@ -20,15 +22,6 @@ const postUser = async (req = request, res = response) => {
   const { name, email, password, role } = req.body;
   const user = new User({ name, email, password, role });
 
-  // Check if email exists
-  const emailExists = await User.findOne({ email });
-  if (emailExists) {
-    return res.status(400).json({
-      msg: 'Email already exists',
-    });
-  }
-
-  // Password encryption
   const salt = bcrypt.genSaltSync();
   user.password = bcrypt.hashSync(password, salt);
 
@@ -39,22 +32,26 @@ const postUser = async (req = request, res = response) => {
   });
 };
 
-const putUser = (req = request, res = response) => {
-  const id = req.params.id;
+const putUser = async (req = request, res = response) => {
+  const { id } = req.params;
+  const { _id, password, google, email, ...rest } = req.body;
 
-  res.status(500).json({
-    msg: 'PUT USER',
-    id,
-  });
+  if (password) {
+    const salt = bcrypt.genSaltSync();
+    rest.password = bcrypt.hashSync(password, salt);
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(id, rest, { new: true });
+
+  res.json(updatedUser);
 };
 
-const deleteUser = (req = request, res = response) => {
-  const id = req.params.id;
+const deleteUser = async (req = request, res = response) => {
+  const { id } = req.params;
 
-  res.json({
-    msg: 'DELETE USER',
-    id,
-  });
+  const removedUser = await User.findByIdAndUpdate(id, { status: false }, { new: true });
+
+  res.json(removedUser);
 };
 
 module.exports = {
