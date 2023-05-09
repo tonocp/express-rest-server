@@ -12,7 +12,7 @@ const emailExists = async (email = '') => {
 };
 
 const userExists = async (id = '') => {
-  const userExists = await User.findOne({ id });
+  const userExists = await User.findById(id);
   if (!userExists) throw new Error(`_id "${id}" don't exists`);
 };
 
